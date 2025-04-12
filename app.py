@@ -1,142 +1,70 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
 
-st.set_page_config(page_title="Stok Updater Shopee & Tokopedia", layout="centered")
+st.set_page_config(layout="wide")
 
-st.title("📦 Sistem Pembaruan Stok Shopee & Tokopedia")
+st.title("🛍️ Stok Updater - Shopee & Tokopedia")
 
-# --- Tabs ---
-tab1, tab2, tab3 = st.tabs(["📘 Panduan", "🛍️ Shopee", "🟢 Tokopedia"])
-
-# --- Tab 1: Panduan ---
-with tab1:
-    st.header("📘 Panduan Penggunaan Sistem")
+# Edukasi Pengguna
+with st.expander("📚 Panduan Sebelum Menggunakan Aplikasi"):
     st.markdown("""
-    Selamat datang di sistem update stok otomatis oleh Prima Hariyasa!
+    Untuk memastikan sistem berjalan dengan baik, harap ikuti langkah-langkah berikut sebelum mengunggah file:
+    
+    1. **Siapkan file `copybar.csv`** — file ini adalah hasil konversi dari Excel `copybar.xlsx`.
+       - Buka file Excel
+       - Klik Save As > Pilih format `.csv (Comma delimited)`
+    
+    2. **Siapkan file `mass_update.xlsx` (Shopee) / `ubah-sekaligus.xlsx` (Tokopedia)**
+       - Buka file asli dari Shopee/Tokopedia
+       - Klik Save As > Simpan kembali sebagai file Excel (format .xlsx)
+    
+    3. Pastikan **kolom SKU tidak kosong dan tidak berubah format (mis. jadi angka 0000nan)**.
 
-    ### 📌 1. Siapkan File Referensi `copybar.xlsx` to `.csv`
-    - File berasal dari sistem SIP atau copybar internal yakni dari tab `Modul` lalu klik `Export Stok Barang`.
-    - Kolom A: SKU (kode barang)
-    - Kolom C: Stok
-    - **Simpan ulang sebagai `.csv`** agar bisa digunakan di sistem ini.
-
-    ### 📌 2. Siapkan File Mass Update
-    - **Shopee:** Gunakan file export mass update, SKU di kolom F, Stok di kolom H
-        - **Cara download** : Masuk pada menu `Produk Saya` lalu pada kanan atas layar klik `Pengaturan Massal` > `Update Update`
-        - Pilih bullets `Informasi Penjualan` klik `Buat` lalu `Download`
-    - **Tokopedia:** Gunakan file export mass update, SKU di kolom K, Stok di kolom I
-        - **Cara download** : Masuk pada menu `Daftar Produk` lalu pada kanan atas layar klik `Atur Sekaligus` > `Ubah Sekaligus`
-        - Pilih bullets `Informasi Penjualan` dan `Semua Barang` lalu `Buat Template` dan Download
-    - **Simpan ulang (Save As) sebagai `.xlsx`** untuk memastikan format valid dengan nama yang baru (misal : mass_update_clean.xlsx).
-
-    ### 📌 3. Upload dan Proses
-    - Buka tab **Shopee** atau **Tokopedia**
-    - Upload file `copybar.csv` dan file mass update
-    - Sistem akan memperbarui stok berdasarkan pencocokan SKU
-
-    💡 *Jika SKU tidak ditemukan, stok akan diisi dengan pesan “SKU tidak ditemukan”*
+    Setelah menyiapkan semuanya, silakan pilih tab di bawah ini untuk memulai.
     """)
 
-# --- Fungsi Umum ---
-def read_reference(file):
-    try:
-        try:
-            df_raw = pd.read_csv(file, header=None, dtype=str)
-        except pd.errors.ParserError:
-            file.seek(0)
-            df_raw = pd.read_csv(file, header=None, delimiter=';', dtype=str)
+tab1, tab2 = st.tabs(["🟠 Shopee", "🟢 Tokopedia"])
 
-        df = df_raw.iloc[1:, [0, 2]]
-        df.columns = ["SKU", "Stok"]
-        df["SKU"] = df["SKU"].astype(str).str.zfill(7).str.strip()
-        df["Stok"] = df["Stok"].astype(str).str.strip()
-        df.dropna(subset=["SKU", "Stok"], inplace=True)
-        return df
-    except Exception as e:
-        st.error(f"❌ Gagal membaca file referensi: {e}")
-        return None
+# ================= Shopee =================
+with tab1:
+    st.header("Update Stok Shopee")
+    copybar_file = st.file_uploader("Upload file copybar.csv", type=["csv"], key="shopee_copybar")
+    shopee_file = st.file_uploader("Upload file mass_update Shopee (.xlsx)", type=["xlsx"], key="shopee_excel")
 
-def convert_df_to_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0)
-    return output
+    if copybar_file and shopee_file:
+        copybar_df = pd.read_csv(copybar_file, dtype=str)
+        sku_map = dict(zip(copybar_df["SKU"], copybar_df["Stok"]))
 
-# --- Tab 2: Shopee ---
+        update_df = pd.read_excel(shopee_file, skiprows=6, dtype=str)
+        update_df.iloc[:, 7] = update_df.iloc[:, 0].map(sku_map).fillna("SKU tidak ditemukan")
+        update_df.iloc[:, 0] = update_df.iloc[:, 0].astype(str)  # Jaga agar SKU tidak berubah format
+
+        st.success("✅ Data Shopee berhasil diperbarui!")
+        st.dataframe(update_df[[update_df.columns[0], update_df.columns[7]]].head(10))
+
+        # Download
+        hasil_shopee = update_df.to_excel("hasil_shopee.xlsx", index=False)
+        with open("hasil_shopee.xlsx", "rb") as f:
+            st.download_button("📥 Download Hasil Shopee", f, file_name="hasil_shopee.xlsx")
+
+# ================= Tokopedia =================
 with tab2:
-    st.subheader("🛍️ Mass Update Shopee")
-    st.caption("📌 Kolom SKU: F (index 5), Kolom Stok: H (index 7)")
+    st.header("Update Stok Tokopedia")
+    copybar_file_tokped = st.file_uploader("Upload file copybar.csv", type=["csv"], key="tokopedia_copybar")
+    tokped_file = st.file_uploader("Upload file mass_update Tokopedia (.xlsx)", type=["xlsx"], key="tokopedia_excel")
 
-    ref_file = st.file_uploader("📋 Upload File Referensi (CSV Copybar)", type=["csv"], key="shopee_ref")
-    shopee_file = st.file_uploader("🗂️ Upload File Mass Update Shopee (.xlsx)", type=["xlsx"], key="shopee_mass")
+    if copybar_file_tokped and tokped_file:
+        copybar_df = pd.read_csv(copybar_file_tokped, dtype=str)
+        sku_map = dict(zip(copybar_df["SKU"], copybar_df["Stok"]))
 
-    if ref_file and shopee_file:
-        with st.spinner("🔄 Memproses file Shopee..."):
-            ref_df = read_reference(ref_file)
-            try:
-                df = pd.read_excel(shopee_file, header=None, dtype=str)
-                df = df.iloc[6:, :].reset_index(drop=True)  # mulai dari baris ke-7
+        update_df = pd.read_excel(tokped_file, skiprows=3, dtype=str)
+        update_df.iloc[:, 10] = update_df.iloc[:, 10].astype(str)  # SKU Kolom K (index 10)
+        update_df.iloc[:, 8] = update_df.iloc[:, 10].map(sku_map).fillna("SKU tidak ditemukan")
 
-                df['SKU'] = df.iloc[:, 5].astype(str).str.split('.').str[0].str.zfill(7).str.strip()
-                stok_dict = dict(zip(ref_df["SKU"], ref_df["Stok"]))
-                df['Stok Baru'] = df['SKU'].apply(lambda sku: stok_dict.get(sku, "SKU tidak ditemukan"))
+        st.success("✅ Data Tokopedia berhasil diperbarui!")
+        st.dataframe(update_df[[update_df.columns[10], update_df.columns[8]]].head(10))
 
-                df.iloc[:, 7] = df['Stok Baru']  # kolom stok = kolom H
-
-                result_df = df[['SKU', df.columns[7]]]
-                st.success("✅ Data Shopee berhasil diperbarui!")
-                st.dataframe(result_df)
-
-                output = convert_df_to_excel(result_df)
-                st.download_button(
-                    label="⬇️ Download Hasil Shopee",
-                    data=output.getvalue(),
-                    file_name="stok-update-shopee.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            except Exception as e:
-                st.error(f"❌ Gagal membaca file Shopee: {e}")
-
-# --- Tab 3: Tokopedia ---
-with tab3:
-    st.subheader("🟢 Mass Update Tokopedia")
-    st.caption("📌 Kolom SKU: K (index 10), Kolom Stok: I (index 8)")
-
-    ref_file_tokped = st.file_uploader("📋 Upload File Referensi (CSV Copybar)", type=["csv"], key="tokped_ref")
-    tokped_file = st.file_uploader("🗂️ Upload File Mass Update Tokopedia (.xlsx)", type=["xlsx"], key="tokped_mass")
-
-    if ref_file_tokped and tokped_file:
-        with st.spinner("🔄 Memproses file Tokopedia..."):
-            ref_df = read_reference(ref_file_tokped)
-            try:
-                df = pd.read_excel(tokped_file, header=None, dtype=str)
-                df = df.iloc[2:, :].reset_index(drop=True)  # mulai dari baris ke-3
-
-                sku_col = df.iloc[:, 10]
-                df['SKU'] = sku_col.apply(
-                    lambda x: str(x).split('.')[0].zfill(7).strip()
-                    if pd.notna(x) and str(x).strip().lower() != 'nan' else 'no sku'
-                )
-
-                stok_dict = dict(zip(ref_df["SKU"], ref_df["Stok"]))
-                df['Stok Baru'] = df['SKU'].apply(
-                    lambda sku: stok_dict.get(sku, "SKU tidak ditemukan") if sku != "no sku" else "no sku"
-                )
-
-                df.iloc[:, 8] = df['Stok Baru']  # kolom stok = kolom I
-
-                result_df = df[['SKU', df.columns[8]]]
-                st.success("✅ Data Tokopedia berhasil diperbarui!")
-                st.dataframe(result_df)
-
-                output = convert_df_to_excel(result_df)
-                st.download_button(
-                    label="⬇️ Download Hasil Tokopedia",
-                    data=output.getvalue(),
-                    file_name="stok-update-tokopedia.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            except Exception as e:
-                st.error(f"❌ Gagal membaca file Tokopedia: {e}")
+        # Download
+        hasil_tokped = update_df.to_excel("hasil_tokopedia.xlsx", index=False)
+        with open("hasil_tokopedia.xlsx", "rb") as f:
+            st.download_button("📥 Download Hasil Tokopedia", f, file_name="hasil_tokopedia.xlsx")
