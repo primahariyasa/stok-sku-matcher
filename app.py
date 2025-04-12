@@ -13,18 +13,22 @@ tab1, tab2, tab3 = st.tabs(["📘 Panduan", "🛍️ Shopee", "🟢 Tokopedia"])
 with tab1:
     st.header("📘 Panduan Penggunaan Sistem")
     st.markdown("""
-    Selamat datang di sistem update stok otomatis!
+    Selamat datang di sistem update stok otomatis oleh Prima Hariyasa!
 
-    ### 📌 1. Siapkan File Referensi `copybar.xlsx`
-    - File berasal dari sistem SIP atau copybar internal.
+    ### 📌 1. Siapkan File Referensi `copybar.xlsx` to `.csv`
+    - File berasal dari sistem SIP atau copybar internal yakni dari tab `Modul` lalu klik `Export Stok Barang`.
     - Kolom A: SKU (kode barang)
     - Kolom C: Stok
     - **Simpan ulang sebagai `.csv`** agar bisa digunakan di sistem ini.
 
     ### 📌 2. Siapkan File Mass Update
     - **Shopee:** Gunakan file export mass update, SKU di kolom F, Stok di kolom H
+        - **Cara download** : Masuk pada menu `Produk Saya` lalu pada kanan atas layar klik `Pengaturan Massal` > `Update Update`
+        - Pilih bullets `Informasi Penjualan` klik `Buat` lalu `Download`
     - **Tokopedia:** Gunakan file export mass update, SKU di kolom K, Stok di kolom I
-    - **Simpan ulang (Save As) sebagai `.xlsx`** untuk memastikan format valid.
+        - **Cara download** : Masuk pada menu `Daftar Produk` lalu pada kanan atas layar klik `Atur Sekaligus` > `Ubah Sekaligus`
+        - Pilih bullets `Informasi Penjualan` dan `Semua Barang` lalu `Buat Template` dan Download
+    - **Simpan ulang (Save As) sebagai `.xlsx`** untuk memastikan format valid dengan nama yang baru (misal : mass_update_clean.xlsx).
 
     ### 📌 3. Upload dan Proses
     - Buka tab **Shopee** atau **Tokopedia**
